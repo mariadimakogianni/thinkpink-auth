@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    environment:
+      - KC_DB_VENDOR=postgres
+      - KC_DB_ADDR=db
+      - KC_DB_DATABASE=keycloak
+      - KC_DB_USER=keycloak
+      - KC_DB_PASSWORD=keycloak
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://db:5432/keycloak
+    ports:
+      - "8081:8080"
+    depends_on:
+      - db
+    networks:
+      - app-network
+    command:
+      - start-dev
+
+  db:
+    image: postgres:latest
+    environment:
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=keycloak
+      - POSTGRES_PASSWORD=keycloak
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  mongodb-thinkpink:
+    image: mongo:latest
+    container_name: mongodb-thinkpink
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./home/kokkinisaltsa/ptychiaki-mongo:/data/db
+    networks:
+      - app-network
+
+  vue-app:
+    build:
+      context: ../thinkpink-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - node-backend
+    networks:
+      - app-network
+
+  node-backend:
+    build:
+      context: ../thinkpink-api
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongodb-thinkpink
+    environment:
+      - MONGO_URI=mongodb://mongodb-thinkpink:27017/mydatabase
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
